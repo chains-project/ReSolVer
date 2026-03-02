@@ -1,6 +1,28 @@
 # rnpm - reproducible npm
 
-**NOTE:** This PoC is not usable as is. Requires an unpublished fork of OSS-rebuild's timewarp and must improve logic for correctness.
+**NOTE:** This PoC is not usable as is.
+
+## How to install
+
+### 1. OSS-rebuild, timewarp
+This project requires a fork of OSS-rebuild's timewarp. To install:
+
+```
+git clone https://github.com/TimothyLindquist/oss-rebuild.git
+cd oss-rebuild
+go build ./cmd/timewarp
+```
+```
+mkdir -p "$HOME/.local/bin"
+mv timewarp "$HOME/.local/bin/"
+export PATH="$HOME/.local/bin:$PATH"
+source ~/.bashrc   # or `source ~/.zshrc` depending on your shell
+```
+
+### 2. Clone and install
+
+TODO
+
 
 ## Irreproducibility: A feature, not a bug
 
