@@ -3,7 +3,7 @@
 set -u  # do not exit on python returning 1
 
 check_files(){
-    local required_files=("package-lock.json" ".rnpm")
+    local required_files=("package.json" "package-lock.json" ".rnpm")
     local missing_files=()
 
     for file in "${required_files[@]}"; do
@@ -16,16 +16,16 @@ check_files(){
         else
             echo "Verification failed. Missing files: ${missing_files[*]}"
         fi
-        exit 1
+        return $E_MISSING_FILE
     fi
-    return 0
+    return $E_SUCCESS
 }
 
 parse_record(){
     local line="$1"
 
     # Local parsing variables
-    local record_command record_npm record_node record_time record_os
+    local record_command record_npm record_node record_time record_os record_manifest_hash record_lock_hash
     local opts_chunk
 
     # Extract simple fields
@@ -44,6 +44,12 @@ parse_record(){
     record_os="${line#* os:}"
     record_os="${record_os%% *}"
 
+    record_manifest_hash="${line#* manifest_hash:}"
+    record_manifest_hash="${record_manifest_hash%% *}"
+
+    record_lock_hash="${line#* lock_hash:}"
+    record_lock_hash="${record_lock_hash%% *}"
+
     # Extract options:(...)
     opts_chunk="${line#* options:}"
     opts_chunk="${opts_chunk%% npm:*}"
@@ -59,9 +65,10 @@ parse_record(){
     RNPM_RECORD_NODE="$record_node"
     RNPM_RECORD_TIME="$record_time"
     RNPM_RECORD_OS="$record_os"
+    RNPM_RECORD_MANIFEST_HASH="$record_manifest_hash"
+    RNPM_RECORD_LOCK_HASH="$record_lock_hash"
     RNPM_RECORD_OPTIONS=("${record_options[@]}")
 
-    return 0
 }
 
 compare_lock() {
@@ -77,4 +84,6 @@ compare_lock() {
     else
         echo "Lockfiles don't match"
     fi
+
+    ...
 }
