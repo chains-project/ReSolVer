@@ -8,22 +8,19 @@ export function checkIntegrity() {
 
   const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"))
 
-  const history = lock.rnpm?.history
-  if (!history || history.length === 0) {
+  if (!lock.manifestIntegrity) {
     return { ok: true }
   }
 
-  const last = history.at(-1)
-
   const currentHash = sha256File("package.json")
 
-  if (currentHash === last.manifest_hash) {
+  if (currentHash === lock.manifestIntegrity) {
     return { ok: true }
   }
 
   return {
     ok: false,
-    expected: last.manifest_hash,
+    expected: lock.manifestIntegrity,
     actual: currentHash
   }
 }
