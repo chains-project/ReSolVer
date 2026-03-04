@@ -1,0 +1,19 @@
+{
+  "name": "rnpmjs",
+  "version": "0.1.0",
+  "description": "Reproducible npm lockfiles.",
+  "main": "index.js",
+  "bin": {
+    "rnpmjs": "bin/rnpm.js"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "keywords": [],
+  "author": "Timothy Lindquist",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "react": "19.2.4"
+  }
+}
