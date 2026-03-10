@@ -1,6 +1,5 @@
 import { spawnSync } from "child_process"
 import { runUpdate } from "./update.js"
-import { emptyHistory } from "../core/recorder.js"
 
 export function runInit(args) {
   spawnSync("npm", ["init", ...args], { stdio: "inherit" })

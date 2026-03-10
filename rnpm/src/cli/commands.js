@@ -14,6 +14,7 @@ export async function runCommand(command, args) {
 
   // --- Check for package.json if command is not init ---
   if (!fs.existsSync("package.json") && command !== "init") {
+    console.log(command)
     console.error(
       "No package.json found. Run 'rnpm init [options]' to create a project."
     )
@@ -72,6 +73,6 @@ export async function runCommand(command, args) {
       break
 
     default:
-      console.log("Usage: rnpm <install|update|verify|init>")
+      console.log("Usage: rnpm <install|update|init|verify>")
   }
 }

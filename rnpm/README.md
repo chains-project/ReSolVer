@@ -1,6 +1,8 @@
 # rnpm - reproducible npm
 
-**NOTE:** This PoC is not usable as is.
+**(WIP)**
+
+Prototype for verifiable dependency resolution for npm. The project has only been tested on `5.15.167.4-microsoft-standard-WSL2`.
 
 ## How to install
 
@@ -21,8 +23,82 @@ source ~/.bashrc   # or `source ~/.zshrc` depending on your shell
 
 ### 2. Clone and install
 
-TODO
+#### GitHub
 
+Using HTTPS:
+
+```
+git clone https://github.com/chains-project/ReSolVer.git
+cd ReSolVer
+git checkout js-rewrite
+```
+
+Using SSH (if configured):
+
+```
+git clone git@github.com/chains-project/ReSolVer.git
+cd ReSolVer
+git checkout js-rewrite
+```
+
+#### Install
+
+Recommended (no sudo):
+
+```
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH="$HOME/.npm-global/bin:$PATH"
+source ~/.bashrc
+```
+
+With sudo:
+
+```
+sudo npm link
+```
+
+## How to use rnpm
+
+### Commands
+The currently supported commands are `install`, `i`, `init`, `update` (from `npm`), and `verify`.
+
+### Flags
+Flags have generally not been tested. I recommend always using `--package-lock-only` and `--no-script` when testing the tool. These flags automatically used during verification. 
+
+Flag `--registry` will cause issues so custom registries are currently not supported.
+
+#### `verify`
+`--regen` - Skips potential prompt and forces proof to be regenerated.
+
+### Example
+
+```
+mkdir tst
+cd tst
+rnpm init -y
+rnpm install react --package-lock-only --ignore-scripts
+rnpm verify
+```
+
+Expected output:
+```
+structure : true
+peer      : true
+dev       : true
+optional  : true
+Verification completed
+```
+
+## Output
+Regular npm commands should have the usual output, with the exception of the added fields `rnpm` and `manifestIntegrity`. `init` will unlike regular `npm` produce a lockfile.
+
+`verify` produces the (attempted) replication of the lockfile, `rnpm-proof.json`, and prints:
+
+- `structure`: Compares all edges but does not care about labels.
+- `peer`: Compares all edges and checks that peer dependencies in the original lockfile are peer dependencies in the reproduced lockfile.
+- `dev`: Compares all edges and checks that dev dependencies in the original lockfile are dev dependencies in the reproduced lockfile.
+- `optional`: Compares all edges and checks that optional dependencies in the original lockfile are optional dependencies in the reproduced lockfile.
 
 ## Irreproducibility: A feature, not a bug
 
