@@ -1,7 +1,7 @@
 {
   "name": "rnpmjs",
-  "version": "0.1.0",
-  "description": "Reproducible npm lockfiles.",
+  "version": "1.0.0",
+  "description": "",
   "main": "index.js",
   "bin": {
     "rnpmjs": "bin/rnpm.js"
@@ -9,11 +9,14 @@
   "directories": {
     "test": "test"
   },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "keywords": [],
-  "author": "Timothy Lindquist",
-  "license": "MIT",
+  "author": "",
+  "license": "ISC",
   "type": "module",
   "dependencies": {
-    "react": "^19.2.4"
+
   }
 }

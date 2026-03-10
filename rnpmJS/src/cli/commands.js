@@ -1,10 +1,9 @@
 import fs from "fs"
 
 import { runInstall } from "./install.js"
-import { runUpdate } from "./update.js"
+import { runUpdate, hasPackage } from "./update.js"
 import { runVerify } from "./verify.js"
 import { runInit } from "./init.js"
-import { runConvert } from "./convert.js"
 
 import { ensureRnpmProject } from "../core/project.js"
 import { checkIntegrity } from "../core/integrity.js"
@@ -13,17 +12,18 @@ import { promptYesNo } from "../utils/prompt.js"
 
 export async function runCommand(command, args) {
 
-  if (command === "init") {
-    runInit(args)
-    return
-  }
-
-  // --- Check for package.json ---
-  if (!fs.existsSync("package.json")) {
+  // --- Check for package.json if command is not init ---
+  if (!fs.existsSync("package.json") && command !== "init") {
     console.error(
       "No package.json found. Run 'rnpm init [options]' to create a project."
     )
     process.exit(1)
+  }
+
+  // --- Special case ---
+  if (command === "init") {
+    runInit(args)
+    return
   }
 
   const projectState = ensureRnpmProject()
@@ -31,28 +31,35 @@ export async function runCommand(command, args) {
   // --- Non-rnpm project ---
   if (projectState === "npm") {
     const ok = await promptYesNo(
-      "This is not an rnpm project. Convert it?"
+      "This is not an rnpm project. Convert it? (This will trigger a lockfile update)"
     )
 
     if (!ok) process.exit(0)
 
-    runConvert()
+    runUpdate()
   }
+
+  
+  // --- Skip integrity check if the command is "update" without a target package ---
+  const allowIntegrityBypass = command === "update" && !hasPackage(args)
 
   // --- Integrity check ---
   const integrity = checkIntegrity()
 
-  if (!integrity.ok) {
+  if (!integrity.ok && !allowIntegrityBypass) {
     const ok = await promptYesNo(
-      "package.json differs from the last rnpm command. Continue?"
+      "package.json differs from the last rnpm command. Continue? (This will trigger a lockfile update)"
     )
 
     if (!ok) process.exit(1)
+    
+    runUpdate()
   }
 
   switch (command) {
 
     case "install":
+    case "i":
       runInstall(args)
       break
 

@@ -2,11 +2,11 @@ import { spawnSync } from "child_process"
 import { recordCommand } from "../core/recorder.js"
 import { resetHistory } from "../core/recorder.js"
 
-function hasPackage(args) {
+export function hasPackage(args) {
   return args.some(arg => !arg.startsWith("-"))
 }
 
-export function runUpdate(args) {
+export function runUpdate(args = []) {
   const result = spawnSync("npm", ["update", ...args], {
     stdio: "inherit"
   })
