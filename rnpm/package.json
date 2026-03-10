@@ -1,10 +1,10 @@
 {
-  "name": "rnpmjs",
-  "version": "1.0.0",
+  "name": "rnpm",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "bin": {
-    "rnpmjs": "bin/rnpm.js"
+    "rnpm": "bin/rnpm.js"
   },
   "directories": {
     "test": "test"
@@ -15,8 +15,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
-  "dependencies": {
-
-  }
+  "type": "module"
 }

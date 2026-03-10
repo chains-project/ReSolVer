@@ -1,6 +1,4 @@
-commands.js - fix order of ops. init should not be first
-convert.js - implement
-init.js - fix implementation. no manual making of package.json. finish spec and follow
-verify.js - implement
-init will need to create record with empty history. either use resetHistory or modify a recorder function
-verifier.js - implement
+Add comments
+support for custom repos
+support for dist-tags other than latest (should not work due to my timewarp edit)
+investigate edge cases for issues
