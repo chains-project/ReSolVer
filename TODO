@@ -1,4 +1,5 @@
 Add comments
+record architecture?
 support for custom repos
 support for dist-tags other than latest (should not work due to my timewarp edit)
 investigate edge cases for issues
