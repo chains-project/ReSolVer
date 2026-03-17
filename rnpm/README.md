@@ -58,18 +58,32 @@ With sudo:
 sudo npm link
 ```
 
+---
+
 ## How to use rnpm
 
 ### Commands
-The currently supported commands are `install`, `i`, `init`, `update` (from `npm`), and `verify`.
+The currently supported commands are:
+`install`, `i`, `init`, `update`, and `verify`.
 
 ### Flags
-Flags have generally not been tested. I recommend always using `--package-lock-only` and `--no-script` when testing the tool. These flags automatically used during verification. 
 
-Flag `--registry` will cause issues so custom registries are currently not supported.
+Most npm flags are not explicitly supported or tested.
 
-#### `verify`
-`--regen` - Skips potential prompt and forces proof to be regenerated.
+For consistent behavior, it is recommended to use:
+- `--package-lock-only`
+- `--ignore-scripts`
+
+These flags are automatically applied during verification.
+
+Custom registries are not currently supported. Using `--registry`
+may lead to incorrect behavior.
+
+**`verify`**
+
+- `--regen` — skip the prompt and force regeneration of the proof
+  (`rnpm-replication.json`)
+  (`rnpm-replication.json`)
 
 ### Example
 
@@ -90,15 +104,58 @@ optional  : true
 Verification completed
 ```
 
+---
+
 ## Output
-Regular npm commands should have the usual output, with the exception of the added fields `rnpm` and `manifestIntegrity`. `init` will unlike regular `npm` produce a lockfile.
 
-`verify` produces the (attempted) replication of the lockfile, `rnpm-replication.json`, and prints:
+### `package-lock.json`
 
-- `structure`: Compares all edges but does not care about labels.
-- `peer`: Compares all edges and checks that peer dependencies in the original lockfile are peer dependencies in the reproduced lockfile.
-- `dev`: Compares all edges and checks that dev dependencies in the original lockfile are dev dependencies in the reproduced lockfile.
-- `optional`: Compares all edges and checks that optional dependencies in the original lockfile are optional dependencies in the reproduced lockfile.
+The following fields are appended to the lockfile produced by npm:
+
+- `manifestIntegrity` - sha256 hash of `package.json`.
+
+  Records which `package.json` the lockfile claims to correspond to.
+  This is an integrity marker, not a proof of correctness.
+
+- `rnpm` - metadata used for reproduction and verification.
+
+  - `history` - ordered list of commands used to produce the lockfile.
+
+    These entries define the replay trace used during verification.
+
+    - `command` - CLI command (e.g. `install`, `update`)
+    - `args` - CLI arguments passed to the command
+    - `npm` - npm version used for the command
+    - `time` - timestamp (RFC 3339), e.g. `2026-03-17T15:18:17.497Z`
+
+      Used during verification to query the registry state at that
+      point in time.
+
+### `rnpm-replication.json`
+A reconstructed `package-lock.json` produced during verification,
+without the additional `rnpm` and `manifestIntegrity` fields.
+Used for comparison with the original lockfile.
+
+### Terminal
+
+Commands behave like their `npm` counterparts, with the exception that
+`package-lock.json` includes the additional fields `rnpm` and
+`manifestIntegrity`. The `init` command also produces a lockfile,
+unlike `npm init`.
+
+The `verify` command generates a reconstructed lockfile,
+`rnpm-replication.json`, and prints the following checks:
+
+- `structure` — compares the dependency graph structure (edges only),
+  ignoring dependency attributes.
+
+- `peer` — verifies that peer dependencies are preserved.
+
+- `dev` — verifies that dev dependencies are preserved.
+
+- `optional` — verifies that optional dependencies are preserved.
+
+---
 
 ## Irreproducibility: A feature, not a bug
 
