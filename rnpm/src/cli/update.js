@@ -25,5 +25,5 @@ export function runUpdate(args = []) {
     recordCommand({ command: "update", args })
   } else {
     resetHistory({ command: "update", args })
-  }s
+  }
 }
