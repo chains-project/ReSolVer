@@ -9,16 +9,17 @@ export async function runVerify(args = []) {
   // Allow flag to skip regeneration prompt
   const forceRegen = args.includes("--regen")
 
-  const root = process.cwd()
-  const tmp = path.join(root, "tmp")
-  const proofPath = path.join(root, "rnpm-proof.json")
+  
+  const os = required("os")
+  const tmp = os.tmpdir()
+  const proofPath = path.join(root, "rnpm-replication.json")
 
   let useExistingProof = false
 
   if (!forceRegen && fs.existsSync(proofPath)) {
 
     useExistingProof = await promptYesNo(
-      "rnpm-proof.json already exists. Verify existing proof?"
+      "rnpm-replication.json already exists. Verify existing proof?"
     )
   }
 

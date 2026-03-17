@@ -49,12 +49,12 @@ export async function generateProof(tmp) {
 
   fs.renameSync(
     path.join(tmp, "package-lock.json"),
-    path.join(root, "rnpm-proof.json")
+    path.join(root, "rnpm-replication.json")
   )
 }
 
 export function compareProof() {
-  const ok = compareLockfiles("package-lock.json", "rnpm-proof.json")
+  const ok = compareLockfiles("package-lock.json", "rnpm-replication.json")
 
   if (!ok) {
     throw new Error("Lockfiles do not match")

@@ -93,7 +93,7 @@ Verification completed
 ## Output
 Regular npm commands should have the usual output, with the exception of the added fields `rnpm` and `manifestIntegrity`. `init` will unlike regular `npm` produce a lockfile.
 
-`verify` produces the (attempted) replication of the lockfile, `rnpm-proof.json`, and prints:
+`verify` produces the (attempted) replication of the lockfile, `rnpm-replication.json`, and prints:
 
 - `structure`: Compares all edges but does not care about labels.
 - `peer`: Compares all edges and checks that peer dependencies in the original lockfile are peer dependencies in the reproduced lockfile.
