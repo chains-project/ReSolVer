@@ -3,6 +3,7 @@ import path from "path"
 import { spawn, execSync } from "child_process"
 import { generateProof, compareProof } from "../core/verifier.js"
 import { promptYesNo } from "../utils/prompt.js"
+import { waitForPort } from "../utils/port.js"
 
 export async function runVerify(args = []) {
 
@@ -10,8 +11,8 @@ export async function runVerify(args = []) {
   const forceRegen = args.includes("--regen")
 
   
-  const os = required("os")
-  const tmp = os.tmpdir()
+  const os = require("os")
+  const tmp = path.join(os.tmpdir(), "rnpm-proof")
   const proofPath = path.join(root, "rnpm-replication.json")
 
   let useExistingProof = false
@@ -42,6 +43,11 @@ export async function runVerify(args = []) {
   try {
 
     timewarp = startTimewarp()
+
+    // Check that the registry is reachable
+    if (!(await isPortOpen(8081))) {
+    throw new Error("Port 8081 is not open (timewarp not running?)")
+    }
 
     await generateProof(tmp)
 
