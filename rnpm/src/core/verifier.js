@@ -62,7 +62,6 @@ export function compareProof() {
 }
 
 function setRecordedEnvironment(entry) {
-  ensureNodeVersion(entry.node)
   ensureNpmVersion(entry.npm)
 
   // OS cannot realistically be changed here.
@@ -74,16 +73,6 @@ function setRecordedEnvironment(entry) {
       `Warning: recorded os=${entry.os}, current os=${currentOs}`
     )
   }
-}
-
-function ensureNodeVersion(version) {
-  const current = execSync("node -v", { encoding: "utf8" }).trim()
-
-  if (current === version) return
-
-  // Adapt this to your environment manager.
-  // Example with n:
-  execSync(`n ${version}`, { stdio: "inherit" })
 }
 
 function ensureNpmVersion(version) {

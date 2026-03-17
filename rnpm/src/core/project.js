@@ -1,5 +1,3 @@
-// Checks (somewhat loosely) that this is an rnpm project
-
 import fs from "fs"
 
 export function isRnpmProject() {
@@ -7,7 +5,9 @@ export function isRnpmProject() {
 
   const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"))
 
-  return !!lock.rnpm
+  // Note that this check implies we consider corrupted rnpm projects to not be rnpm at all
+  // Maybe more user friendly solutions exist?
+  return !!lock.rnpm && !!lock.manifestIntegrity
 }
 
 export function ensureRnpmProject() {

@@ -8,10 +8,11 @@ function readLock() {
 }
 
 function writeLock(lock) {
-  fs.writeFileSync(
-    "package-lock.json",
-    JSON.stringify(lock, null, 2) + "\n"
-  )
+  // Atomic write
+  const tmp = "package-lock.json.tmp"
+
+  fs.writeFileSync(tmp, JSON.stringify(lock, null, 2) + "\n")
+  fs.renameSync(tmp, "package-lock.json")
 }
 
 function buildRecord({ command, args }) {
@@ -19,9 +20,7 @@ function buildRecord({ command, args }) {
     command,
     args,
     npm: execSync("npm -v").toString().trim(),
-    node: process.version,
     time: new Date().toISOString(),
-    os: os.release()
   }
 }
 

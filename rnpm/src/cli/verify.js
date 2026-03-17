@@ -5,6 +5,23 @@ import { generateProof, compareProof } from "../core/verifier.js"
 import { promptYesNo } from "../utils/prompt.js"
 import { waitForPort } from "../utils/port.js"
 
+/**
+ * Verifies that the current lockfile can be deterministically reproduced.
+ *
+ * The process:
+ * - Optionally reuses an existing replication proof
+ * - Starts a timewarp registry for deterministic dependency resolution
+ * - Replays recorded install history in a temporary environment
+ * - Generates a replicated lockfile
+ * - Compares the replicated lockfile with the original
+ *
+ * Side effects:
+ * - Temporarily modifies Node and npm versions
+ * - Starts and stops a background process (timewarp)
+ * - Creates and deletes a temporary working directory
+ *
+ * @param {string[]} args - CLI arguments (supports --regen to force regeneration)
+ */
 export async function runVerify(args = []) {
 
   // Allow flag to skip regeneration prompt
@@ -17,6 +34,7 @@ export async function runVerify(args = []) {
 
   let useExistingProof = false
 
+  // If a previous replication file exists, optionally reuse it
   if (!forceRegen && fs.existsSync(proofPath)) {
 
     useExistingProof = await promptYesNo(
@@ -29,11 +47,12 @@ export async function runVerify(args = []) {
     return
   }
 
-  const originalNode = execSync("node -v", { encoding: "utf8" }).trim()
+  // Save environment for restoration
   const originalNpm = execSync("npm -v", { encoding: "utf8" }).trim()
 
   let timewarp = null
 
+  // Reset /tmp/rnpm-proof
   if (fs.existsSync(tmp)) {
     fs.rmSync(tmp, { recursive: true, force: true })
   }
@@ -42,15 +61,18 @@ export async function runVerify(args = []) {
 
   try {
 
+    // Start timewarp registry. Used to filter dependencies by publish date
     timewarp = startTimewarp()
 
-    // Check that the registry is reachable
-    if (!(await isPortOpen(8081))) {
+    // Wait until registry is reachable
+    if (!(await waitForPort(8081))) {
     throw new Error("Port 8081 is not open (timewarp not running?)")
     }
 
+    // Replicate lockfile
     await generateProof(tmp)
 
+    // Compare replicated lockfile with original
     compareProof()
 
     console.log("Verification completed")
@@ -62,29 +84,30 @@ export async function runVerify(args = []) {
 
   } finally {
 
+    // Restore original environments
     restoreEnvironment(originalNode, originalNpm)
 
+    // Stop timewarp
     if (timewarp) {
       stopProcessTree(timewarp)
     }
 
+    // Clean up tmp dir
     if (fs.existsSync(tmp)) {
       fs.rmSync(tmp, { recursive: true, force: true })
     }
   }
 }
 
-function restoreEnvironment(nodeVersion, npmVersion) {
-
-  try {
-    execSync(`n ${nodeVersion}`, { stdio: "ignore" })
-  } catch {}
+// Restore npm versions
+function restoreEnvironment(npmVersion) {
 
   try {
     execSync(`npm install -g npm@${npmVersion}`, { stdio: "ignore" })
   } catch {}
 }
 
+// Start timewarp in background
 function startTimewarp() {
   return spawn("timewarp", [], {
     stdio: "ignore",
@@ -92,6 +115,7 @@ function startTimewarp() {
   })
 }
 
+// Terminate timewarp process group
 function stopProcessTree(child) {
   try {
     process.kill(-child.pid, "SIGTERM")
