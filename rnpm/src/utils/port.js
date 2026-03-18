@@ -26,7 +26,7 @@ export function isPortOpen(port, host = "localhost", timeout = 1000) {
 
 export async function waitForPort(port, retries = 5) {
   for (let i = 0; i < retries; i++) {
-    if (await isPortOpen(port)) return
+    if (await isPortOpen(port)) return true
     await new Promise(r => setTimeout(r, 500))
   }
   throw new Error(`Port ${port} is not open`)

@@ -1,5 +1,6 @@
 import fs from "fs"
 import path from "path"
+import os from "os"
 import { spawn, execSync } from "child_process"
 import { generateProof, compareProof } from "../core/verifier.js"
 import { promptYesNo } from "../utils/prompt.js"
@@ -27,10 +28,10 @@ export async function runVerify(args = []) {
   // Allow flag to skip regeneration prompt
   const forceRegen = args.includes("--regen")
 
-  
-  const os = require("os")
-  const tmp = path.join(os.tmpdir(), "rnpm-proof")
+  const root = process.cwd()
+  const tmp = path.join(os.tmpdir(), "rnpm")
   const proofPath = path.join(root, "rnpm-replication.json")
+  const tmpProofPath = path.join(tmp, "rnpm-replication.json")
 
   let useExistingProof = false
 
@@ -52,12 +53,12 @@ export async function runVerify(args = []) {
 
   let timewarp = null
 
-  // Reset /tmp/rnpm-proof
+  // Reset temp proof workspace
   if (fs.existsSync(tmp)) {
     fs.rmSync(tmp, { recursive: true, force: true })
   }
 
-  fs.mkdirSync(tmp)
+  fs.mkdirSync(tmp, { recursive: true })
 
   try {
 
@@ -65,12 +66,14 @@ export async function runVerify(args = []) {
     timewarp = startTimewarp()
 
     // Wait until registry is reachable
-    if (!(await waitForPort(8081))) {
-    throw new Error("Port 8081 is not open (timewarp not running?)")
-    }
+    await waitForPort(8081)
 
     // Replicate lockfile
     await generateProof(tmp)
+
+    // Move the generated proof from the temp workspace into the current dir
+    fs.rmSync(proofPath, { force: true })
+    fs.renameSync(tmpProofPath, proofPath)
 
     // Compare replicated lockfile with original
     compareProof()
@@ -85,7 +88,7 @@ export async function runVerify(args = []) {
   } finally {
 
     // Restore original environments
-    restoreEnvironment(originalNode, originalNpm)
+    restoreEnvironment(originalNpm)
 
     // Stop timewarp
     if (timewarp) {

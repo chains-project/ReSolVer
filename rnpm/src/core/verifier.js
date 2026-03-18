@@ -5,6 +5,7 @@ import { compareLockfiles } from "./compareLockfiles.js"
 
 export async function generateProof(tmp) {
   const root = process.cwd()
+  const proofPath = path.join(tmp, "rnpm-replication.json")
 
   const lock = JSON.parse(
     fs.readFileSync(path.join(root, "package-lock.json"), "utf8")
@@ -49,7 +50,7 @@ export async function generateProof(tmp) {
 
   fs.renameSync(
     path.join(tmp, "package-lock.json"),
-    path.join(root, "rnpm-replication.json")
+    proofPath
   )
 }
 
