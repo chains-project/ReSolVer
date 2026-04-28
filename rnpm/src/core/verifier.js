@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import { execSync } from "child_process"
+import { execSync, spawnSync } from "child_process"
 import { compareLockfiles } from "./compareLockfiles.js"
 
 export async function generateProof(tmp) {
@@ -18,34 +18,12 @@ export async function generateProof(tmp) {
     path.join(tmp, "package.json")
   )
 
+  const cachePath = path.join(tmp, ".npm-cache")
+
   for (const entry of history) {
     setRecordedEnvironment(entry)
 
-    const registry = `http://npm:${entry.time}@localhost:8081`
-
-    const args = [
-    entry.command,
-    ...(entry.args ?? []),
-    "--registry",
-    registry,
-    "--package-lock-only",
-    "--no-fund",
-    "--no-progress",
-    "--no-audit",
-    "--ignore-scripts"
-    ]
-
-    const cmd = ["npm", ...args]
-
-    execSync("npm cache clean --force", {
-        cwd:tmp,
-        stdio: "ignore"
-    })
-
-    execSync(cmd.join(" "), {
-    cwd: tmp,
-    stdio: ["ignore", "ignore", "inherit"]
-    })
+    runNpm(buildReplayArgs(entry, cachePath), tmp)
   }
 
   fs.renameSync(
@@ -55,10 +33,51 @@ export async function generateProof(tmp) {
 }
 
 export function compareProof() {
-  const ok = compareLockfiles("package-lock.json", "rnpm-replication.json")
+  const result = compareLockfiles("package-lock.json", "rnpm-replication.json")
 
-  if (!ok) {
-    throw new Error("Lockfiles do not match")
+  if (!result.ok) {
+    throw new Error(result.message)
+  }
+}
+
+export function buildReplayArgs(entry, cachePath = null) {
+  const args = [
+    entry.command,
+    ...(entry.args ?? [])
+  ]
+
+  if (usesBefore(entry.command)) {
+    args.push("--before", entry.time)
+  }
+
+  args.push(
+    "--package-lock-only",
+    "--no-fund",
+    "--no-progress",
+    "--no-audit",
+    "--ignore-scripts"
+  )
+
+  if (cachePath) {
+    args.push("--cache", cachePath)
+  }
+
+  return args
+}
+
+function usesBefore(command) {
+  return command === "install" || command === "update"
+}
+
+function runNpm(args, cwd, stdio = ["ignore", "ignore", "inherit"]) {
+  const result = spawnSync("npm", args, { cwd, stdio })
+
+  if (result.error) {
+    throw new Error(`npm ${args[0]} failed: ${result.error.message}`)
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`npm ${args[0]} failed`)
   }
 }
 
