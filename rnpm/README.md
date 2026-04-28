@@ -6,42 +6,25 @@ Prototype for verifiable dependency resolution for npm. The project has only bee
 
 ## How to install
 
-### 1. Clone and install
-
-#### GitHub
+Clone the repository, enter the `rnpm` package directory, and link it globally.
 
 Using HTTPS:
 
 ```
 git clone https://github.com/chains-project/ReSolVer.git
-cd ReSolVer
-git checkout no-timewarp
+cd ReSolVer/rnpm
+npm link
 ```
 
 Using SSH (if configured):
 
 ```
 git clone git@github.com/chains-project/ReSolVer.git
-cd ReSolVer
-git checkout no-timewarp
+cd ReSolVer/rnpm
+npm link
 ```
 
-#### Install
-
-Recommended (no sudo):
-
-```
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global'
-export PATH="$HOME/.npm-global/bin:$PATH"
-source ~/.bashrc
-```
-
-With sudo:
-
-```
-sudo npm link
-```
+If your npm global prefix requires elevated permissions, configure a user-owned npm prefix first or use your system's preferred Node version manager before running `npm link`.
 
 ---
 
