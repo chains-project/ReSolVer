@@ -15,7 +15,7 @@ Using HTTPS:
 ```
 git clone https://github.com/chains-project/ReSolVer.git
 cd ReSolVer
-git checkout js-rewrite
+git checkout no-timewarp
 ```
 
 Using SSH (if configured):
@@ -23,7 +23,7 @@ Using SSH (if configured):
 ```
 git clone git@github.com/chains-project/ReSolVer.git
 cd ReSolVer
-git checkout js-rewrite
+git checkout no-timewarp
 ```
 
 #### Install
@@ -55,7 +55,7 @@ The currently supported commands are:
 
 Most npm flags are not explicitly supported or tested.
 
-For consistent behavior, it is recommended to use:
+For security and efficiency, it is recommended to use:
 - `--package-lock-only`
 - `--ignore-scripts`
 
