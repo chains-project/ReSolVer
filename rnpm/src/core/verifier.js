@@ -1,39 +1,47 @@
 import fs from "fs"
 import path from "path"
-import { execSync, spawnSync } from "child_process"
+import { execFileSync, spawnSync } from "child_process"
 import { compareLockfiles } from "./compareLockfiles.js"
+
+const BACKUP_DIR = ".backup"
+const LOCKFILE_NAME = "package-lock.json"
+const PROOF_NAME = "rnpm-replication.json"
+const NPM_BIN = process.platform === "win32" ? "npm.cmd" : "npm"
 
 export async function generateProof(tmp) {
   const root = process.cwd()
-  const proofPath = path.join(tmp, "rnpm-replication.json")
+  const proofPath = path.join(tmp, PROOF_NAME)
+  const rootLockfilePath = path.join(root, LOCKFILE_NAME)
 
   const lock = JSON.parse(
-    fs.readFileSync(path.join(root, "package-lock.json"), "utf8")
+    fs.readFileSync(rootLockfilePath, "utf8")
   )
 
   const history = lock.rnpm.history
 
-  fs.copyFileSync(
-    path.join(root, "package.json"),
-    path.join(tmp, "package.json")
-  )
-
   const cachePath = path.join(tmp, ".npm-cache")
+
+  // Rebuild in the original project directory so workspace package manifests
+  // and other local path relationships remain available to npm during replay.
+  fs.rmSync(rootLockfilePath, { force: true })
 
   for (const entry of history) {
     setRecordedEnvironment(entry)
 
-    runNpm(buildReplayArgs(entry, cachePath), tmp)
+    console.error(
+      `Replaying npm ${entry.command} with npm@${entry.npm}...`
+    )
+    runNpm(buildReplayArgs(entry, cachePath), root)
   }
 
-  fs.renameSync(
-    path.join(tmp, "package-lock.json"),
-    proofPath
-  )
+  fs.copyFileSync(rootLockfilePath, proofPath)
 }
 
-export function compareProof() {
-  const result = compareLockfiles("package-lock.json", "rnpm-replication.json")
+export function compareProof(
+  originalPath = LOCKFILE_NAME,
+  proofPath = PROOF_NAME
+) {
+  const result = compareLockfiles(originalPath, proofPath)
 
   if (!result.ok) {
     throw new Error(result.message)
@@ -70,7 +78,7 @@ function usesBefore(command) {
 }
 
 function runNpm(args, cwd, stdio = ["ignore", "ignore", "inherit"]) {
-  const result = spawnSync("npm", args, { cwd, stdio })
+  const result = spawnSync(NPM_BIN, args, { cwd, stdio })
 
   if (result.error) {
     throw new Error(`npm ${args[0]} failed: ${result.error.message}`)
@@ -96,11 +104,24 @@ function setRecordedEnvironment(entry) {
 }
 
 function ensureNpmVersion(version) {
-  const current = execSync("npm -v", { encoding: "utf8" }).trim()
+  const current = execFileSync(NPM_BIN, ["-v"], { encoding: "utf8" }).trim()
 
   if (current === version) return
 
-  execSync(`npm install -g npm@${version}`, { stdio: "inherit" })
+  console.error(`Switching npm from ${current} to ${version}...`)
+  const result = spawnSync(
+    NPM_BIN,
+    ["install", "-g", `npm@${version}`, "--loglevel", "notice"],
+    { stdio: "inherit" }
+  )
+
+  if (result.error) {
+    throw new Error(`failed to switch npm version: ${result.error.message}`)
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`failed to switch npm version to ${version}`)
+  }
 }
 
 function getCurrentOs() {
@@ -109,4 +130,60 @@ function getCurrentOs() {
   } catch {
     return process.platform
   }
+}
+
+export function backupLockfile(
+  root = process.cwd(),
+  backupRoot = path.join(root, BACKUP_DIR)
+) {
+  const state = createBackupState(root, backupRoot)
+
+  fs.mkdirSync(state.dir, { recursive: true })
+  fs.copyFileSync(state.lockfilePath, state.backupPath)
+
+  return state
+}
+
+export function restoreBackupIfNeeded(
+  root = process.cwd(),
+  backupRoot = path.join(root, BACKUP_DIR)
+) {
+  const state = createBackupState(root, backupRoot)
+
+  if (!fs.existsSync(state.backupPath)) {
+    return false
+  }
+
+  if (!fs.existsSync(state.lockfilePath) || !filesEqual(state.lockfilePath, state.backupPath)) {
+    fs.mkdirSync(path.dirname(state.lockfilePath), { recursive: true })
+    fs.copyFileSync(state.backupPath, state.lockfilePath)
+    return true
+  }
+
+  return false
+}
+
+export function removeBackup(root = process.cwd(), backupRoot = path.join(root, BACKUP_DIR)) {
+  const state = createBackupState(root, backupRoot)
+
+  if (fs.existsSync(state.dir)) {
+    fs.rmSync(state.dir, { recursive: true, force: true })
+  }
+}
+
+function createBackupState(root, backupRoot) {
+  return {
+    dir: backupRoot,
+    lockfilePath: path.join(root, LOCKFILE_NAME),
+    backupPath: path.join(backupRoot, LOCKFILE_NAME),
+  }
+}
+
+function filesEqual(pathA, pathB) {
+  return fs.readFileSync(pathA).equals(fs.readFileSync(pathB))
+}
+
+export const __testing__ = {
+  createBackupState,
+  filesEqual,
 }

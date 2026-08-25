@@ -2,8 +2,29 @@ import fs from "fs"
 import path from "path"
 import os from "os"
 import { execSync } from "child_process"
-import { generateProof, compareProof } from "../core/verifier.js"
+import {
+  backupLockfile,
+  compareProof,
+  generateProof,
+  removeBackup,
+  restoreBackupIfNeeded,
+} from "../core/verifier.js"
 import { promptYesNo } from "../utils/prompt.js"
+
+const defaultVerifyDeps = {
+  backupLockfile,
+  compareProof,
+  execSync,
+  existsSync: fs.existsSync,
+  generateProof,
+  mkdtempSync: fs.mkdtempSync,
+  moveFileSync,
+  promptYesNo,
+  removeBackup,
+  restoreBackupIfNeeded,
+  restoreEnvironment,
+  rmSync: fs.rmSync,
+}
 
 /**
  * Verifies that the current lockfile can be deterministically reproduced.
@@ -21,28 +42,35 @@ import { promptYesNo } from "../utils/prompt.js"
  * @param {string[]} args - CLI arguments (supports --regen to force regeneration)
  */
 export async function runVerify(args = []) {
+  return runVerifyWith(args, defaultVerifyDeps)
+}
 
+async function runVerifyWith(args = [], deps) {
   // Allow flag to skip regeneration prompt
   const forceRegen = args.includes("--regen")
+  const nonInteractive = args.includes("--non-interactive") || args.includes("--yes")
+  const keepNpm = args.includes("--keep-npm")
 
   const root = process.cwd()
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rnpm-"))
+  const tmp = deps.mkdtempSync(path.join(os.tmpdir(), "rnpm-"))
+  const backupDir = path.join(tmp, ".backup")
   const proofPath = path.join(root, "rnpm-replication.json")
   const tmpProofPath = path.join(tmp, "rnpm-replication.json")
 
   let useExistingProof = false
 
   // If a previous replication file exists, optionally reuse it
-  if (!forceRegen && fs.existsSync(proofPath)) {
-
-    useExistingProof = await promptYesNo(
-      "rnpm-replication.json already exists. Verify existing proof?"
-    )
+  if (!forceRegen && deps.existsSync(proofPath)) {
+    if (!nonInteractive) {
+      useExistingProof = await deps.promptYesNo(
+        "rnpm-replication.json already exists. Verify existing proof?"
+      )
+    }
   }
 
   if (useExistingProof) {
     try {
-      compareProof()
+      deps.compareProof()
       console.log("Verification completed")
     } catch (err) {
       console.error("Verification failed:", err.message)
@@ -53,19 +81,20 @@ export async function runVerify(args = []) {
   }
 
   // Save environment for restoration
-  const originalNpm = execSync("npm -v", { encoding: "utf8" }).trim()
+  const originalNpm = deps.execSync("npm -v", { encoding: "utf8" }).trim()
 
   try {
+    const backupState = deps.backupLockfile(root, backupDir)
 
     // Replicate lockfile
-    await generateProof(tmp)
+    await deps.generateProof(tmp)
 
     // Move the generated proof from the temp workspace into the current dir
-    fs.rmSync(proofPath, { force: true })
-    fs.renameSync(tmpProofPath, proofPath)
+    deps.rmSync(proofPath, { force: true })
+    deps.moveFileSync(tmpProofPath, proofPath)
 
     // Compare replicated lockfile with original
-    compareProof()
+    deps.compareProof(backupState.backupPath, proofPath)
 
     console.log("Verification completed")
 
@@ -75,13 +104,17 @@ export async function runVerify(args = []) {
     process.exitCode = 1
 
   } finally {
+    deps.restoreBackupIfNeeded(root, backupDir)
+    deps.removeBackup(root, backupDir)
 
     // Restore original environments
-    restoreEnvironment(originalNpm)
+    if (!keepNpm) {
+      deps.restoreEnvironment(originalNpm)
+    }
 
     // Clean up tmp dir
-    if (fs.existsSync(tmp)) {
-      fs.rmSync(tmp, { recursive: true, force: true })
+    if (deps.existsSync(tmp)) {
+      deps.rmSync(tmp, { recursive: true, force: true })
     }
   }
 }
@@ -93,3 +126,19 @@ function restoreEnvironment(npmVersion) {
   } catch {}
 }
 
+function moveFileSync(src, dst) {
+  try {
+    fs.renameSync(src, dst)
+  } catch (err) {
+    if (err.code === "EXDEV") {
+      fs.copyFileSync(src, dst)
+      fs.unlinkSync(src)
+    } else {
+      throw err
+    }
+  }
+}
+
+export const __testing__ = {
+  runVerifyWith,
+}
